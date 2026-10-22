@@ -1,6 +1,6 @@
 'use strict';
 /* Meine Steuererklärung – Version 1.0.0 */
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';
 
 /* ---------- Steuerwerte ---------- */
 const RATE_PENDEL = 0.38;      // € je Entfernungskilometer ab 2026, ab dem 1. km
@@ -88,6 +88,7 @@ function newState() {
     sites: [
       { id:'goe', name:'Göllnitz', km:0, type:'erste' },
       { id:'lie', name:'Lieskau', km:0, type:'dienst' },
+      { id:'dol', name:'Dollenchen', km:0, type:'dienst' },
     ],
     lock: { mode:'none', pinHash:null, credId:null },
     years: {},
@@ -339,7 +340,7 @@ function vCalc() {
   <div class="card" style="display:flex;flex-direction:column;gap:10px">
     <h2>Standorte</h2>
     ${S.sites.map(s => `<div style="display:flex;flex-direction:column;gap:6px;border-bottom:1px solid var(--line);padding-bottom:10px">
-      <b>${esc(s.name)}</b>
+      <b>${esc(s.name)}${s.id === 'dol' ? ' <span class="tiny">(Pflanzenproduktion)</span>' : ''}</b>
       <div class="grid2">
         <label class="f">km einfache Strecke<input data-sitekm="${s.id}" inputmode="decimal" value="${fmtIn(s.km)}" placeholder="0"></label>
         <label class="f">Art<select data-sitetype="${s.id}">
@@ -727,6 +728,7 @@ document.addEventListener('visibilitychange', () => {
     await DB.open();
     const st = await DB.get('kv', 'state');
     if (st) S = Object.assign(newState(), st);
+    if (!S.sites.some(x => x.id === 'dol')) { S.sites.push({ id:'dol', name:'Dollenchen', km:0, type:'dienst' }); }
     else await save();
     if (navigator.storage && navigator.storage.persist) { try { await navigator.storage.persist(); } catch (_) {} }
   } catch (e) {
