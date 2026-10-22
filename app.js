@@ -1,6 +1,6 @@
 'use strict';
 /* Meine Steuererklärung – Version 1.0.0 */
-const APP_VERSION = '1.0.3';
+const APP_VERSION = '1.0.4';
 
 /* ---------- Steuerwerte ---------- */
 const RATE_PENDEL = 0.38;      // € je Entfernungskilometer ab 2026, ab dem 1. km
@@ -89,6 +89,7 @@ function newState() {
       { id:'goe', name:'Göllnitz', km:0, type:'erste' },
       { id:'lie', name:'Lieskau', km:0, type:'dienst' },
       { id:'dol', name:'Dollenchen', km:0, type:'dienst' },
+      { id:'mas', name:'Massener Höfe', short:'Massen', km:0, type:'erste' },
     ],
     lock: { mode:'none', pinHash:null, credId:null },
     years: {},
@@ -340,19 +341,19 @@ function vCalc() {
   <div class="card" style="display:flex;flex-direction:column;gap:10px">
     <h2>Standorte</h2>
     ${S.sites.map(s => `<div style="display:flex;flex-direction:column;gap:6px;border-bottom:1px solid var(--line);padding-bottom:10px">
-      <b>${esc(s.name)}${s.id === 'dol' ? ' <span class="tiny">(Pflanzenproduktion)</span>' : ''}</b>
+      <b>${esc(s.name)}${s.id === 'dol' ? ' <span class="tiny">(Pflanzenproduktion)</span>' : s.id === 'mas' ? ' <span class="tiny">(alter Arbeitgeber)</span>' : ''}</b>
       <div class="grid2">
         <label class="f">km einfache Strecke<input data-sitekm="${s.id}" inputmode="decimal" value="${fmtIn(s.km)}" placeholder="0"></label>
         <label class="f">Art<select data-sitetype="${s.id}">
           <option value="erste" ${s.type === 'erste' ? 'selected' : ''}>Erste Tätigkeitsstätte</option>
           <option value="dienst" ${s.type === 'dienst' ? 'selected' : ''}>Dienstfahrt</option></select></label>
       </div></div>`).join('')}
-    <div class="tiny">Welcher Standort deine erste Tätigkeitsstätte ist, legt dein Arbeitgeber fest, meist im Arbeitsvertrag. Es kann nur einen geben. Fahrten zu anderen Standorten zählen dann als Dienstfahrten.</div>
+    <div class="tiny">Welcher Standort deine erste Tätigkeitsstätte ist, legt dein Arbeitgeber fest, meist im Arbeitsvertrag. Je Arbeitgeber gibt es nur eine. Fahrten zu anderen Standorten desselben Arbeitgebers zählen als Dienstfahrten. Massener Höfe ist als alter Arbeitgeber eine eigene erste Tätigkeitsstätte.</div>
   </div>
   <div class="card">
     <h2>Arbeitstage pro Monat</h2>
-    <div class="scroll"><table class="m"><thead><tr><th>Monat</th>${S.sites.map(s => `<th style="text-align:right">${esc(s.name)}</th>`).join('')}</tr></thead><tbody>
-    ${MONATE.map((mn, m) => `<tr><td>${mn}</td>${S.sites.map(s => `<td><input data-day="${s.id}:${m}" inputmode="numeric" value="${Y.days[s.id][m] || ''}" placeholder="0" aria-label="${mn} ${esc(s.name)}"></td>`).join('')}</tr>`).join('')}
+    <div class="scroll"><table class="m"><thead><tr><th>Monat</th>${S.sites.map(s => `<th style="text-align:right">${esc(s.short || s.name)}</th>`).join('')}</tr></thead><tbody>
+    ${MONATE.map((mn, m) => `<tr><td>${mn.slice(0, 3)}</td>${S.sites.map(s => `<td><input data-day="${s.id}:${m}" inputmode="numeric" value="${Y.days[s.id][m] || ''}" placeholder="0" aria-label="${mn} ${esc(s.name)}"></td>`).join('')}</tr>`).join('')}
     </tbody></table></div>
     <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">
       <div class="res"><span>Weg zur Arbeit (${p.tage} Tage)</span><span>${eur(p.sum)}</span></div>
@@ -738,6 +739,7 @@ document.addEventListener('visibilitychange', () => {
     const st = await DB.get('kv', 'state');
     if (st) S = Object.assign(newState(), st);
     if (!S.sites.some(x => x.id === 'dol')) { S.sites.push({ id:'dol', name:'Dollenchen', km:0, type:'dienst' }); }
+    if (!S.sites.some(x => x.id === 'mas')) { S.sites.push({ id:'mas', name:'Massener Höfe', short:'Massen', km:0, type:'erste' }); }
     else await save();
     if (navigator.storage && navigator.storage.persist) { try { await navigator.storage.persist(); } catch (_) {} }
   } catch (e) {
