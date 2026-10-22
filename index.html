@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F6E56">
+<title>Meine Steuererklärung</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --green:#0F6E56; --green-dark:#085041; --green-soft:#E1F5EE; --green-mid:#1D9E75; --on-green:#E1F5EE; --head-sub:#9FE1CB;
+  --bg:#F3F5F4; --card:#FFFFFF; --soft:#EEF2F0; --fg:#1C2421; --fg2:#56635E; --fg3:#8A9691;
+  --line:#D9E0DD; --warn-bg:#FAEEDA; --warn-fg:#633806; --bad:#A32D2D; --ok:#3B6D11;
+  --fs:16px; --radius:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#111614; --card:#1A211E; --soft:#232B28; --fg:#E6ECE9; --fg2:#A7B3AE; --fg3:#75817C;
+    --line:#2E3834; --green-soft:#0F3A2F; --green-dark:#9FE1CB; --warn-bg:#3A2A10; --warn-fg:#FAC775; --bad:#F09595; --ok:#97C459; color-scheme:dark }
+}
+*{box-sizing:border-box}
+html{font-size:var(--fs)}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:1rem;line-height:1.45;-webkit-tap-highlight-color:transparent}
+header{position:sticky;top:0;z-index:5;background:var(--green);color:var(--on-green);padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;display:flex;align-items:center;gap:10px}
+header h1{font-size:1.15rem;margin:0;font-weight:600;flex:1;min-width:0}
+header .sub{display:block;font-size:.75rem;font-weight:400;color:var(--head-sub)}
+header button{background:transparent;border:0;color:var(--on-green);font-size:1rem;padding:6px 8px;border-radius:8px;cursor:pointer}
+header button:focus-visible{outline:2px solid var(--on-green)}
+main{padding:14px 16px calc(90px + env(safe-area-inset-bottom,0px));max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs button{background:none;border:0;color:var(--fg2);padding:8px 0 9px;font-size:.7rem;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+nav.tabs button svg{width:22px;height:22px}
+nav.tabs button.on{color:var(--green);font-weight:600}
+@media (prefers-color-scheme: dark){ nav.tabs button.on{color:var(--head-sub)} }
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+.card h2{font-size:1rem;margin:0 0 8px}
+h3.sec{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--fg2);margin:10px 0 0}
+.muted{color:var(--fg2);font-size:.85rem}
+.tiny{color:var(--fg3);font-size:.75rem}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.metric{background:var(--soft);border-radius:var(--radius);padding:10px 12px}
+.metric .l{font-size:.75rem;color:var(--fg2)}
+.metric .n{font-size:1.25rem;font-weight:600;font-variant-numeric:tabular-nums}
+.bar{height:8px;background:var(--soft);border-radius:4px;overflow:hidden;margin-top:6px}
+.bar > div{height:100%;background:var(--green-mid)}
+.hint{background:var(--warn-bg);color:var(--warn-fg);border-radius:var(--radius);padding:10px 12px;font-size:.9rem;display:flex;gap:8px;align-items:flex-start}
+.hint button{margin-left:auto}
+.chip{display:inline-block;font-size:.72rem;padding:2px 8px;border-radius:8px;background:var(--green-soft);color:var(--green-dark)}
+.item{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.item .top{display:flex;gap:10px;align-items:center;padding:12px;cursor:pointer}
+.item .top .t{flex:1;min-width:0;font-weight:500}
+.item .top .v{font-variant-numeric:tabular-nums;color:var(--fg2);font-size:.9rem;white-space:nowrap}
+.item .body{padding:0 12px 12px;display:flex;flex-direction:column;gap:8px}
+.cb{width:26px;height:26px;border-radius:7px;border:2px solid var(--fg3);display:flex;align-items:center;justify-content:center;flex:none;background:transparent;padding:0;cursor:pointer}
+.cb.on{background:var(--green);border-color:var(--green)}
+.cb.on::after{content:"";width:7px;height:13px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg) translate(-1px,-1px)}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--fg2)}
+input,select,textarea{font:inherit;font-size:1rem;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;min-width:0}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--green-mid);outline-offset:0}
+input[type=range]{padding:0;border:0;accent-color:var(--green)}
+input[type=checkbox]{width:auto;accent-color:var(--green)}
+.btn{font:inherit;font-size:.95rem;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:9px 12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:var(--green);border-color:var(--green);color:#fff;font-weight:600}
+.btn.danger{color:var(--bad)}
+.btn:focus-visible{outline:2px solid var(--green-mid)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.res{background:var(--green-soft);color:var(--green-dark);border-radius:8px;padding:9px 12px;display:flex;justify-content:space-between;font-weight:600;font-variant-numeric:tabular-nums}
+.list .r{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.list .r:last-child{border-bottom:0}
+.th{width:46px;height:46px;border-radius:8px;background:var(--soft);flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--fg3)}
+.th img{width:100%;height:100%;object-fit:cover}
+table.m{width:100%;border-collapse:collapse;font-size:.9rem;font-variant-numeric:tabular-nums}
+table.m th,table.m td{padding:4px 4px;border-bottom:1px solid var(--line);text-align:left}
+table.m td input{padding:6px;text-align:right}
+.scroll{overflow-x:auto}
+.photo-big{width:100%;border-radius:8px;display:block}
+.lock{position:fixed;inset:0;z-index:20;background:var(--green);color:var(--on-green);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px}
+.lock input{max-width:200px;text-align:center;font-size:1.4rem;letter-spacing:.4em}
+.toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:20px;font-size:.9rem;z-index:30}
+.empty{text-align:center;padding:20px 10px;color:var(--fg2)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="htitle">Meine Steuererklärung<span class="sub" id="hsub"></span></h1>
+  <button id="fontBtn" aria-label="Schriftgröße umschalten">A / A+</button>
+  <button id="setBtn" aria-label="Einstellungen">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+  </button>
+</header>
+<main id="main"><div class="empty">App wird geladen …</div></main>
+<nav class="tabs" id="tabs"></nav>
+<input type="file" id="fileCam" accept="image/*" capture="environment" hidden>
+<input type="file" id="fileGal" accept="image/*" hidden>
+<input type="file" id="fileImp" accept=".json,application/json" hidden>
+<script src="app.js"></script>
+</body>
+</html>

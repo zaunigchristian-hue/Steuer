@@ -1,0 +1,16 @@
+{
+  "name": "Meine Steuererklärung",
+  "short_name": "Steuer",
+  "description": "Belege, Checkliste, Rechner und Fristen für die Steuererklärung",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0F6E56",
+  "theme_color": "#0F6E56",
+  "lang": "de",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
