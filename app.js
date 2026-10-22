@@ -1,6 +1,6 @@
 'use strict';
 /* Meine Steuererklärung – Version 1.0.0 */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 
 /* ---------- Steuerwerte ---------- */
 const RATE_PENDEL = 0.38;      // € je Entfernungskilometer ab 2026, ab dem 1. km
