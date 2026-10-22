@@ -1,6 +1,6 @@
 'use strict';
 /* Meine Steuererklärung – Version 1.0.0 */
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.0.3';
 
 /* ---------- Steuerwerte ---------- */
 const RATE_PENDEL = 0.38;      // € je Entfernungskilometer ab 2026, ab dem 1. km
@@ -426,6 +426,10 @@ function vSet() {
     <div class="tiny" id="storeInfo"></div>
   </div>
   <div class="card" style="display:flex;flex-direction:column;gap:10px">
+    <h2>App-Version ${APP_VERSION}</h2>
+    <button class="btn" data-act="update">Nach Update suchen</button>
+  </div>
+  <div class="card" style="display:flex;flex-direction:column;gap:10px">
     <h2>Alles löschen</h2>
     <button class="btn danger" data-act="wipe">Alle Daten löschen</button>
     <div id="wipeConfirm"></div>
@@ -649,6 +653,11 @@ document.addEventListener('click', async e => {
     } else { el.dataset.sure = '1'; el.textContent = 'Wirklich löschen? Noch einmal tippen'; }
   }
   else if (a === 'kursadd') { yd().kurs.push({ date:todayISO(), km:0, erst:0, v8:false }); await save(); render(); }
+  else if (a === 'update') {
+    toast('Suche nach Update …');
+    try { const r = await navigator.serviceWorker.getRegistration(); if (r) await r.update(); } catch (_) {}
+    setTimeout(() => location.reload(), 1500);
+  }
   else if (a === 'export') doExport();
   else if (a === 'import') $('#fileImp').click();
   else if (a === 'summary') copySummary();
@@ -737,5 +746,9 @@ document.addEventListener('visibilitychange', () => {
   }
   yd();
   if (S.lock.mode === 'none') { unlocked = true; render(); } else { renderTabs(); showLock(); }
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator) {
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !window._reloaded) { window._reloaded = true; location.reload(); } });
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
+  }
 })();
