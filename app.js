@@ -1,6 +1,6 @@
 'use strict';
 /* Meine Steuererklärung – Version 1.0.0 */
-const APP_VERSION = '1.0.4';
+const APP_VERSION = '1.0.5';
 
 /* ---------- Steuerwerte ---------- */
 const RATE_PENDEL = 0.38;      // € je Entfernungskilometer ab 2026, ab dem 1. km
@@ -52,10 +52,13 @@ const ITEMS = [
   { id:'krank', sec:'Besondere Kosten', kind:'amount', grp:'agb', t:'Krankheitskosten',
     d:'Zuzahlungen, Brille, Zahnarzt. Es wirkt nur der Teil oberhalb der zumutbaren Belastung. Die schätzt der Rechner, wenn du dein Einkommen einträgst.', e:'Anlage Außergewöhnliche Belastungen' },
 
+  { id:'edelmetall', sec:'Geldanlage (nicht absetzbar)', kind:'metal', grp:'none', t:'Silbermünzen und Edelmetalle',
+    d:'Der Kauf ist nicht absetzbar. Die Belege beweisen Kaufdatum und Preis: Nach mehr als einem Jahr ist ein Verkauf steuerfrei. Wer früher verkauft, muss den Gewinn versteuern, wenn alle solchen Gewinne im Jahr zusammen 1.000 € oder mehr ergeben.', e:'Nur bei Verkauf innerhalb 1 Jahr: Anlage SO' },
   { id:'schaetzer', sec:'Nebeneinkünfte', kind:'amount', grp:'none', minYear:2027, income:true, t:'Schätzerhonorar (Einnahmen)',
     d:'Einnahmen als Wildschadensschätzer. Wie sie eingeordnet werden und ob ein Freibetrag greift, klärst du mit dem Finanzamt oder einem Lohnsteuerhilfeverein.', e:'Anlage noch klären' },
 ];
-const CATS = ITEMS.filter(i => i.kind === 'amount');
+const CATS = ITEMS.filter(i => i.kind === 'amount' || i.kind === 'metal');
+const FREIGRENZE_SO = 1000;
 
 /* ---------- Speicher (IndexedDB) ---------- */
 const DB = {
@@ -159,6 +162,13 @@ function itemValue(i, Y) {
   if (i.kind === 'days') return Math.min(HO_MAX, (+Y.homeoffice || 0) * HO_TAG);
   if (i.kind === 'amount') return (+Y.manual[i.id] || 0) + receiptsFor(i.id).reduce((a, r) => a + rEff(r), 0);
   return 0;
+}
+function freeFrom(iso) { const [y, m, d] = iso.split('-').map(Number); return new Date(y + 1, m - 1, d + 1); }
+function metals() { return S.receipts.filter(r => r.cat === 'edelmetall').sort((a, b) => (a.date || '').localeCompare(b.date || '')); }
+function metalGain(r) { return (+r.soldPrice || 0) - (+r.amount || 0); }
+function metalTaxable(r) { return !!(r.soldDate && new Date(r.soldDate) < freeFrom(r.date)); }
+function metalYearSum(y) {
+  return metals().filter(r => r.soldDate && +r.soldDate.slice(0, 4) === y && metalTaxable(r)).reduce((a, r) => a + metalGain(r), 0);
 }
 function zumutbar(gde) {
   // ledig, ohne Kinder: 5 % bis 15.340 €, 6 % bis 51.130 €, 7 % darüber (stufenweise)
@@ -271,7 +281,7 @@ function vList() {
       <div class="top" data-open="${i.id}">
         <button class="cb ${on ? 'on' : ''}" data-check="${i.id}" aria-label="${esc(i.t)} erledigt" aria-pressed="${on}"></button>
         <span class="t">${esc(i.t)}</span>
-        ${i.kind !== 'check' ? `<span class="v">${eur(val)}</span>` : ''}
+        ${i.kind === 'metal' ? `<span class="v">${metals().filter(r => !r.soldDate).length} im Bestand</span>` : i.kind !== 'check' ? `<span class="v">${eur(val)}</span>` : ''}
       </div>
       ${open ? `<div class="body">
         <div class="muted">${esc(i.d)}</div>
@@ -286,6 +296,26 @@ function itemBody(i, Y) {
   if (i.kind === 'calc') return `<button class="btn" data-go="calc">Im Rechner bearbeiten</button>`;
   if (i.kind === 'days') return `<label class="f">Anzahl Homeoffice-Tage im Jahr
       <input id="ho" inputmode="numeric" value="${Y.homeoffice || ''}" placeholder="0"></label>`;
+  if (i.kind === 'metal') {
+    const ms = metals(); const g = metalYearSum(S.year);
+    const rows = ms.map(r => {
+      const ff = freeFrom(r.date); let st;
+      if (r.soldDate) {
+        const gain = metalGain(r);
+        st = metalTaxable(r) ? `<span style="color:var(--bad)">Verkauft ${isoToDE(r.soldDate)}, innerhalb der Frist · Gewinn ${eur(gain)}</span>`
+                             : `<span style="color:var(--ok)">Verkauft ${isoToDE(r.soldDate)}, steuerfrei</span>`;
+      } else {
+        const n = daysUntil(ff);
+        st = n <= 0 ? `<span style="color:var(--ok)">Steuerfrei verkaufbar seit ${dDE(ff)}</span>` : `Steuerfrei verkaufbar ab ${dDE(ff)} (noch ${n} Tage)`;
+      }
+      return `<div class="r" data-edit="${r.id}"><div class="th" data-thumb="${r.photo || ''}">${IC.photo}</div>
+        <div style="flex:1;min-width:0"><div style="font-weight:500">${esc(r.title || 'Silbermünzen')}${r.qty ? ` · ${r.qty} Stück` : ''}</div>
+        <div class="tiny">Gekauft ${isoToDE(r.date)} für ${eur(+r.amount || 0)}</div><div class="tiny">${st}</div></div></div>`;
+    }).join('');
+    return `<div class="list">${rows || '<div class="muted">Noch keine Käufe erfasst.</div>'}</div>
+      ${g !== 0 ? `<div class="hint">Gewinn aus Verkäufen innerhalb der Frist ${S.year}: ${eur(g)}. ${g < FREIGRENZE_SO ? 'Unter der Freigrenze von 1.000 €, also steuerfrei. Zählt aber mit anderen privaten Verkäufen zusammen.' : 'Ab 1.000 € ist der ganze Gewinn steuerpflichtig: in die Anlage SO eintragen.'}</div>` : ''}
+      <button class="btn" data-newrec="edelmetall">+ Kauf erfassen</button>`;
+  }
   if (i.kind === 'amount') {
     const rs = receiptsFor(i.id);
     return `<label class="f">Betrag ohne Beleg (zusätzlich)
@@ -325,6 +355,14 @@ function vRecForm() {
     </div>
     <label class="f">Gehört zu<select id="r_cat">${CATS.filter(i => !i.minYear || S.year >= i.minYear).map(i => `<option value="${i.id}" ${i.id === r.cat ? 'selected' : ''}>${esc(i.t)}</option>`).join('')}</select></label>
     <div><span class="chip" id="r_elster">ELSTER: ${esc(c ? c.e : '')}</span></div>
+    <div id="metalBox" ${r.cat === 'edelmetall' ? '' : 'hidden'} style="display:flex;flex-direction:column;gap:10px">
+      <label class="f">Stückzahl<input id="r_qty" inputmode="numeric" value="${r.qty || ''}" placeholder="10"></label>
+      <div class="tiny">Wenn du verkaufst, hier eintragen. Die App prüft dann die Jahresfrist.</div>
+      <div class="grid2">
+        <label class="f">Verkauft am<input id="r_soldDate" type="date" value="${esc(r.soldDate || '')}"></label>
+        <label class="f">Verkaufspreis in €<input id="r_soldPrice" inputmode="decimal" value="${fmtIn(r.soldPrice)}" placeholder="0,00"></label>
+      </div>
+    </div>
     <div id="shareBox" ${shareOn ? '' : 'hidden'}><label class="f">Beruflicher Anteil: <b id="r_shareOut">${r.share == null ? 100 : r.share} %</b>
       <input id="r_share" type="range" min="0" max="100" step="5" value="${r.share == null ? 100 : r.share}"></label></div>
     <label class="f">Notiz oder Ablageort<input id="r_note" value="${esc(r.note)}" placeholder="Ordner Steuer ${S.year}, Fach 3"></label>
@@ -396,6 +434,8 @@ function vCal() {
       : `<div class="card"><div class="row" style="justify-content:space-between"><b>${esc(f.t)}</b><span class="muted">${left}</span></div>
          <div style="font-size:1.05rem;font-weight:600">${dDE(f.d)}</div><div class="tiny">${esc(f.s)}</div></div>`;
   }).join('') + `
+  ${(() => { const open = metals().filter(r => !r.soldDate && daysUntil(freeFrom(r.date)) > 0);
+    return open.length ? `<div class="card"><b>Silbermünzen: steuerfrei verkaufbar ab</b>${open.map(r => `<div class="row" style="justify-content:space-between"><span class="muted">${esc(r.title || 'Silbermünzen')} (gekauft ${isoToDE(r.date)})</span><span>${dDE(freeFrom(r.date))}</span></div>`).join('')}</div>` : ''; })()}
   <div class="card"><b>Einspruch gegen den Bescheid</b><div class="muted">Innerhalb eines Monats, nachdem der Bescheid bekannt gegeben wurde. Datum vom Bescheid notieren.</div></div>
   <div class="card"><b>Schätzerhonorar</b><div class="muted">${S.year >= 2027 ? 'Der Bereich ist in der Checkliste unter „Nebeneinkünfte“ freigeschaltet.' : 'Wird ab Steuerjahr 2027 in der Checkliste freigeschaltet.'}</div></div>
   <div class="tiny">Fällt eine Frist auf ein Wochenende, gilt der nächste Werktag. Feiertage berücksichtigt die App nicht.</div>`;
@@ -488,17 +528,24 @@ function readDraftForm() {
   const c = ITEMS.find(i => i.id === draft.cat);
   draft.share = c && c.share ? +$('#r_share').value : 100;
   draft.note = $('#r_note').value.trim();
+  if (draft.cat === 'edelmetall') {
+    draft.qty = Math.max(0, Math.round(numIn($('#r_qty').value))) || null;
+    draft.soldDate = $('#r_soldDate').value || null;
+    draft.soldPrice = draft.soldDate ? numIn($('#r_soldPrice').value) : null;
+  } else { draft.qty = draft.soldDate = draft.soldPrice = null; }
 }
 async function saveReceipt() {
   readDraftForm();
   if (!draft.amount) { toast('Bitte einen Betrag eintragen'); return; }
+  if (draft.soldDate && draft.soldDate < draft.date) { toast('Das Verkaufsdatum liegt vor dem Kaufdatum'); return; }
+  if (draft.soldDate && !draft.soldPrice) { toast('Bitte den Verkaufspreis eintragen'); return; }
   const y = +draft.date.slice(0, 4);
   if (y && y !== S.year) { draft.year = y; yd(y); }
   if (draft.photoBlob) {
     if (draft.oldPhoto) { try { await DB.del('photos', draft.oldPhoto); } catch (_) {} delete photoCache[draft.oldPhoto]; }
     await DB.put('photos', draft.photo, draft.photoBlob);
   }
-  const rec = { id:draft.id, year:draft.year, title:draft.title, date:draft.date, amount:draft.amount, cat:draft.cat, share:draft.share, note:draft.note, photo:draft.photo };
+  const rec = { id:draft.id, year:draft.year, title:draft.title, date:draft.date, amount:draft.amount, cat:draft.cat, share:draft.share, note:draft.note, photo:draft.photo, qty:draft.qty || null, soldDate:draft.soldDate || null, soldPrice:draft.soldPrice == null ? null : draft.soldPrice };
   const i = S.receipts.findIndex(r => r.id === rec.id);
   if (i >= 0) S.receipts[i] = rec; else S.receipts.push(rec);
   await save(); draft = null; tab = 'rec'; render();
@@ -608,7 +655,8 @@ function summaryText() {
   let sec = '';
   visibleItems().forEach(i => {
     if (i.sec !== sec) { sec = i.sec; t += `\n${sec.toUpperCase()}\n`; }
-    t += `[${Y.checks[i.id] ? 'x' : ' '}] ${i.t}${i.kind !== 'check' ? ': ' + eur(itemValue(i, Y)) : ''}  (${i.e})\n`;
+    t += `[${Y.checks[i.id] ? 'x' : ' '}] ${i.t}${i.kind === 'metal' ? '' : i.kind !== 'check' ? ': ' + eur(itemValue(i, Y)) : ''}  (${i.e})\n`;
+    if (i.kind === 'metal') metals().forEach(r => { t += `    ${isoToDE(r.date)} ${r.title || 'Silbermünzen'}${r.qty ? ' ' + r.qty + ' Stück' : ''} ${eur(+r.amount)}${r.soldDate ? ` · verkauft ${isoToDE(r.soldDate)} für ${eur(+r.soldPrice)}${metalTaxable(r) ? ' (innerhalb Frist)' : ' (steuerfrei)'}` : ` · steuerfrei ab ${dDE(freeFrom(r.date))}`}\n`; });
   });
   t += `\nWerbungskosten gesamt: ${eur(s.wk)} (Pauschbetrag ${eur0(Y.pausch)})\n`;
   const rs = S.receipts.filter(r => r.year === S.year);
@@ -705,6 +753,7 @@ document.addEventListener('change', async e => {
     const c = ITEMS.find(i => i.id === t.value);
     $('#r_elster').textContent = 'ELSTER: ' + (c ? c.e : '');
     $('#shareBox').hidden = !(c && c.share);
+    $('#metalBox').hidden = t.value !== 'edelmetall';
   } else if (t.dataset.sitetype) {
     S.sites.find(s => s.id === t.dataset.sitetype).type = t.value; await save(); render();
   } else if (t.id === 'yearSel') { S.year = +t.value; yd(); await save(); render(); }

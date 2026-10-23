@@ -1,5 +1,5 @@
 // Offline-Speicher der App. Bei jedem Update die Versionsnummer erhöhen.
-const CACHE = 'meine-steuer-v1.0.4';
+const CACHE = 'meine-steuer-v1.0.5';
 const FILES = ['./', './index.html', './app.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
